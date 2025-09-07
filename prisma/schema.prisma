@@ -1,0 +1,325 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Core business entities
+model Job {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  employerId  String
+  budget      Float
+  skills      Json     // JSON array of skills
+  ratings     Json     // JSON object with difficulty, prospects, fun
+  employerRatings Json? // JSON object with credit, salary, attitude, prospects
+  remote      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employer    Employer @relation(fields: [employerId], references: [id])
+  jobSkills   JobSkill[]
+  analytics   AnalyticsEvent[]
+
+  @@map("jobs")
+}
+
+model Employer {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  website     String?
+  ratings     Json?    // JSON object with credit, salary, attitude, prospects
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  jobs        Job[]
+
+  @@map("employers")
+}
+
+model Skill {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  category  String?
+  createdAt DateTime @default(now())
+
+  jobSkills JobSkill[]
+
+  @@map("skills")
+}
+
+model JobSkill {
+  id       String @id @default(cuid())
+  jobId    String
+  skillId  String
+  weight   Float  @default(1.0) // Importance weight for this skill in the job
+
+  job      Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skill    Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, skillId])
+  @@map("job_skills")
+}
+
+// Insights and analytics
+model Insight {
+  id          String   @id @default(cuid())
+  category    String   // demand, supply, pricing, trends
+  title       String
+  value       Float
+  change      Float
+  changeType  String   // increase, decrease, stable
+  description String
+  timestamp   DateTime @default(now())
+
+  @@map("insights")
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  type      String   // insight_click, job_apply, report_view
+  insightType String?
+  jobId     String?
+  userId    String?
+  metadata  Json?    // Additional event data
+  timestamp DateTime @default(now())
+
+  job       Job?     @relation(fields: [jobId], references: [id])
+
+  @@map("analytics_events")
+}
+
+// Reports and monetization
+model Report {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  content         String   // Full report content
+  summary         String?  // Short summary for preview
+  category        String
+  price           Float    @default(0)
+  estimatedDemand Int?     // Demand rating 1-10
+  targetAudience  String?  // Target audience description
+  keyInsights     Json?    // JSON array of key insights
+  dataSources     Json?    // JSON array of data sources
+  isPublic        Boolean  @default(false)
+  status          String   @default("draft") // draft, published, archived
+  publishedBy     String?
+  publishedAt     DateTime?
+  draftId         String?  // Reference to the draft this was published from
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  versions        ReportVersion[]
+  purchases       Purchase[]
+
+  @@map("reports")
+}
+
+model ReportVersion {
+  id        String   @id @default(cuid())
+  reportId  String
+  version   Int
+  content   String
+  changes   String?  // Description of changes
+  createdAt DateTime @default(now())
+
+  report    Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, version])
+  @@map("report_versions")
+}
+
+model ReportDraft {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  category        String
+  estimatedDemand Int      @default(5)
+  targetAudience  String?
+  keyInsights     Json?    // JSON array of key insights
+  dataSources     Json?    // JSON array of data sources
+  content         String   // Full draft content
+  status          String   @default("draft") // draft, review, approved, published, rejected
+  createdBy       String   @default("system") // system, human
+  evaluationId    String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  publishedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  evaluation      Evaluation? @relation(fields: [evaluationId], references: [id])
+
+  @@map("report_drafts")
+}
+
+model Purchase {
+  id        String   @id @default(cuid())
+  userId    String
+  reportId  String
+  amount    Float
+  status    String   @default("completed") // completed, refunded, pending
+  createdAt DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id])
+  report    Report    @relation(fields: [reportId], references: [id])
+
+  @@map("purchases")
+}
+
+// User management
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  skills        Json     // JSON array of user skills
+  experienceLevel String @default("beginner") // beginner, intermediate, expert
+  preferences   Json?    // JSON object with user preferences
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subscriptions Subscription[]
+  purchases     Purchase[]
+
+  @@map("users")
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String
+  tier      String   // free, pro, team, enterprise
+  status    String   @default("active") // active, cancelled, expired
+  startDate DateTime @default(now())
+  endDate   DateTime?
+
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// AI and evaluation
+model PromptTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  version     Int
+  task        String   // job_analysis, employer_rating, report_generation
+  template    String
+  parameters  Json?    // Template parameters
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  evaluations Evaluation[]
+
+  @@unique([name, version])
+  @@map("prompt_templates")
+}
+
+model Evaluation {
+  id             String   @id @default(cuid())
+  periodStart    DateTime
+  periodEnd      DateTime
+  revenue        Int      @default(0)
+  reportSales    Int      @default(0)
+  subscriptions  Int      @default(0)
+  dau            Int      @default(0)
+  mau            Int      @default(0)
+  ctrInsights    Float?
+  apiErrors      Int      @default(0)
+  latencyMsP95   Int?
+  suggestions    Json?    // AI-generated suggestions
+  appliedChanges Json?    // Changes that were automatically applied
+  status         String   @default("pending") // pending, applied, reviewed, rejected
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  promptTemplateId String?
+  promptTemplate   PromptTemplate? @relation(fields: [promptTemplateId], references: [id])
+
+  reportDrafts     ReportDraft[]
+
+  @@map("evaluations")
+}
+
+model GoldenDataset {
+  id          String   @id @default(cuid())
+  name        String
+  task        String
+  input       Json     // Input data
+  expectedOutput Json  // Expected output
+  annotations Json?    // Additional annotations
+  createdAt   DateTime @default(now())
+
+  @@map("golden_datasets")
+}
+
+// Task management and queues
+model TaskLog {
+  id          String   @id @default(cuid())
+  taskId      String
+  queueName   String
+  status      String   // pending, processing, completed, failed
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(5)
+  data        Json?    // Task input data
+  result      Json?    // Task output/result
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@map("task_logs")
+}
+
+// Recommendation and configuration management
+model RecommendationConfig {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  weights     Json     // Recommendation algorithm weights
+  parameters  Json?    // Additional parameters
+  isActive    Boolean  @default(true)
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("recommendation_configs")
+}
+
+// Notification and alert system
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // evaluation_complete, risk_alert, system_error
+  title     String
+  message   String
+  priority  String   @default("normal") // low, normal, high, critical
+  status    String   @default("unread") // unread, read, archived
+  userId    String?
+  metadata  Json?    // Additional notification data
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+// System metrics and monitoring
+model SystemMetric {
+  id          String   @id @default(cuid())
+  metric      String   // cpu_usage, memory_usage, api_latency, error_rate
+  value       Float
+  unit        String?  // percentage, ms, count, etc.
+  timestamp   DateTime @default(now())
+  metadata    Json?    // Additional metric data
+
+  @@map("system_metrics")
+}

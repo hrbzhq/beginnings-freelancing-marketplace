@@ -1,0 +1,58 @@
+[
+  {
+    "date": "2025-09-01",
+    "userEngagement": 85.5,
+    "jobViews": 1200,
+    "revenue": 450.75,
+    "apiCalls": 2500,
+    "errors": 12
+  },
+  {
+    "date": "2025-09-02",
+    "userEngagement": 88.2,
+    "jobViews": 1350,
+    "revenue": 520.30,
+    "apiCalls": 2800,
+    "errors": 8
+  },
+  {
+    "date": "2025-09-03",
+    "userEngagement": 82.1,
+    "jobViews": 1100,
+    "revenue": 380.90,
+    "apiCalls": 2200,
+    "errors": 15
+  },
+  {
+    "date": "2025-09-04",
+    "userEngagement": 90.3,
+    "jobViews": 1450,
+    "revenue": 610.25,
+    "apiCalls": 3100,
+    "errors": 6
+  },
+  {
+    "date": "2025-09-05",
+    "userEngagement": 87.8,
+    "jobViews": 1300,
+    "revenue": 495.60,
+    "apiCalls": 2700,
+    "errors": 10
+  },
+  {
+    "date": "2025-09-06",
+    "userEngagement": 91.2,
+    "jobViews": 1500,
+    "revenue": 675.40,
+    "apiCalls": 3200,
+    "errors": 5
+  },
+  {
+    "date": "2025-09-07",
+    "userEngagement": 89.7,
+    "jobViews": 1400,
+    "revenue": 580.85,
+    "apiCalls": 2950,
+    "errors": 7
+  }
+]
